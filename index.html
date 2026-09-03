@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1419">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Web Kasir - TDR Store</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- MOBILE TOP BAR -->
+    <header class="mobile-topbar">
+      <button class="menu-toggle" id="menuToggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="mobile-brand">
+        <img src="assets/logo.jpeg" alt="Logo">
+        <strong>TDR STORE</strong>
+      </div>
+      <div class="mobile-clock" id="mobileClock">--:--</div>
+    </header>
+
+    <!-- SIDEBAR OVERLAY -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img src="assets/logo.jpeg" alt="Logo">
+        <div>
+          <strong>TDR STORE</strong>
+          <small>Web Kasir</small>
+        </div>
+        <button class="sidebar-close" id="sidebarClose" aria-label="Tutup">✕</button>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn active" data-page="kasir">
+          <span class="icon">🛒</span> <span class="nav-label">Kasir</span>
+        </button>
+        <button class="nav-btn" data-page="produk">
+          <span class="icon">📦</span> <span class="nav-label">Produk</span>
+        </button>
+        <button class="nav-btn" data-page="riwayat">
+          <span class="icon">📋</span> <span class="nav-label">Riwayat</span>
+        </button>
+        <button class="nav-btn" data-page="laporan">
+          <span class="icon">📊</span> <span class="nav-label">Laporan</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="clock" id="clock">--:--</div>
+        <div class="date" id="date">-</div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+      <!-- ========== HALAMAN KASIR ========== -->
+      <section id="page-kasir" class="page active">
+        <header class="page-header">
+          <div>
+            <h1>Kasir</h1>
+            <p>Pilih produk lalu proses pembayaran</p>
+          </div>
+          <div class="header-actions">
+            <input type="search" id="searchProduct" placeholder="Cari produk..." class="search-input">
+            <select id="filterCategory" class="select">
+              <option value="">Semua Kategori</option>
+            </select>
+          </div>
+        </header>
+
+        <div class="kasir-layout">
+          <!-- Product Grid -->
+          <div class="product-panel">
+            <div class="product-grid" id="productGrid"></div>
+          </div>
+
+          <!-- Cart Panel -->
+          <div class="cart-panel">
+            <div class="cart-header">
+              <h2>Keranjang</h2>
+              <button id="clearCartBtn" class="btn-text danger">Kosongkan</button>
+            </div>
+            <div class="cart-items" id="cartItems">
+              <div class="empty-cart">Keranjang masih kosong</div>
+            </div>
+            <div class="cart-summary">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <strong id="subtotal">Rp0</strong>
+              </div>
+              <div class="summary-row" id="adminFeeRow" style="display:none">
+                <span>Biaya Admin (Pulsa)</span>
+                <strong id="adminFee">Rp0</strong>
+              </div>
+              <div class="summary-row">
+                <span>Diskon</span>
+                <div class="discount-input">
+                  <input type="number" id="discountInput" min="0" value="0" placeholder="0">
+                  <span>Rp</span>
+                </div>
+              </div>
+              <div class="summary-row total">
+                <span>Total</span>
+                <strong id="grandTotal">Rp0</strong>
+              </div>
+              <button id="payBtn" class="btn primary full" disabled>Bayar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== HALAMAN PRODUK ========== -->
+      <section id="page-produk" class="page">
+        <header class="page-header">
+          <div>
+            <h1>Manajemen Produk</h1>
+            <p>Tambah, edit, atau hapus produk</p>
+          </div>
+          <button id="addProductBtn" class="btn primary">+ Tambah Produk</button>
+        </header>
+        <div class="table-wrap">
+          <table class="data-table" id="productTable">
+            <thead>
+              <tr>
+                <th>Gambar</th>
+                <th>Nama</th>
+                <th>Kategori</th>
+                <th>Harga</th>
+                <th>Stok</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="productTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========== HALAMAN RIWAYAT ========== -->
+      <section id="page-riwayat" class="page">
+        <header class="page-header">
+          <div>
+            <h1>Riwayat Transaksi</h1>
+            <p>Semua transaksi yang sudah diproses</p>
+          </div>
+          <div class="header-actions">
+            <input type="date" id="filterDate" class="select">
+            <button id="clearFilterDate" class="btn secondary">Reset</button>
+          </div>
+        </header>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No. Transaksi</th>
+                <th>Tanggal</th>
+                <th>Item</th>
+                <th>Total</th>
+                <th>Metode</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========== HALAMAN LAPORAN ========== -->
+      <section id="page-laporan" class="page">
+        <header class="page-header">
+          <div>
+            <h1>Laporan Penjualan</h1>
+            <p>Ringkasan performa toko</p>
+          </div>
+        </header>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card">
+            <span class="stat-label">Penjualan Hari Ini</span>
+            <strong class="stat-value" id="statToday">Rp0</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Transaksi Hari Ini</span>
+            <strong class="stat-value" id="statTodayCount">0</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Total Penjualan</span>
+            <strong class="stat-value" id="statAll">Rp0</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Total Transaksi</span>
+            <strong class="stat-value" id="statAllCount">0</strong>
+          </div>
+        </div>
+        <div class="table-wrap" style="margin-top:24px">
+          <h3 style="margin-bottom:12px">Produk Terlaris</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Produk</th>
+                <th>Terjual</th>
+                <th>Pendapatan</th>
+              </tr>
+            </thead>
+            <tbody id="topProductsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- BOTTOM NAV (Mobile) -->
+    <nav class="bottom-nav" id="bottomNav">
+      <button class="bottom-nav-btn active" data-page="kasir">
+        <span class="icon">🛒</span>
+        <span>Kasir</span>
+      </button>
+      <button class="bottom-nav-btn" data-page="produk">
+        <span class="icon">📦</span>
+        <span>Produk</span>
+      </button>
+      <button class="bottom-nav-btn" data-page="riwayat">
+        <span class="icon">📋</span>
+        <span>Riwayat</span>
+      </button>
+      <button class="bottom-nav-btn" data-page="laporan">
+        <span class="icon">📊</span>
+        <span>Laporan</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- MODAL PEMBAYARAN -->
+  <div id="payModal" class="modal hidden">
+    <div class="modal-box pay-modal">
+      <div class="modal-header">
+        <h2>Pembayaran</h2>
+        <button class="modal-close" data-close="payModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="pay-total">
+          <span>Total Bayar</span>
+          <strong id="payTotalDisplay">Rp0</strong>
+        </div>
+
+        <div class="pay-methods">
+          <label class="pay-method">
+            <input type="radio" name="payMethod" value="cash" checked>
+            <span>💵 Cash</span>
+          </label>
+          <label class="pay-method">
+            <input type="radio" name="payMethod" value="qris">
+            <span>📱 QRIS</span>
+          </label>
+        </div>
+
+        <div id="cashPanel">
+          <label class="field">
+            <span>Uang Diterima</span>
+            <input type="number" id="cashReceived" min="0" placeholder="0">
+          </label>
+          <div class="change-box">
+            <span>Kembalian</span>
+            <strong id="changeAmount">Rp0</strong>
+          </div>
+        </div>
+
+        <div id="qrisPanel" class="hidden">
+          <div class="qris-box">
+            <img src="assets/qris.jpeg" alt="QRIS">
+            <p>Scan QRIS untuk pembayaran</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Catatan (opsional)</span>
+          <textarea id="payNote" rows="2" placeholder="Catatan transaksi..."></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" data-close="payModal">Batal</button>
+        <button class="btn primary" id="confirmPayBtn">Konfirmasi Bayar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PRODUK (Tambah/Edit) -->
+  <div id="productModal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="productModalTitle">Tambah Produk</h2>
+        <button class="modal-close" data-close="productModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editProductId">
+        <label class="field">
+          <span>Nama Produk</span>
+          <input type="text" id="prodName" required placeholder="Contoh: Joki Rank Glory">
+        </label>
+        <label class="field">
+          <span>Kategori</span>
+          <select id="prodCategory">
+            <option value="Joki">Joki</option>
+            <option value="Akun">Akun</option>
+            <option value="Pulsa">Pulsa</option>
+            <option value="Desain">Desain</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Harga (Rp)</span>
+          <input type="number" id="prodPrice" min="0" required placeholder="12000">
+        </label>
+        <label class="field">
+          <span>Stok</span>
+          <input type="number" id="prodStock" min="0" value="999" placeholder="999">
+        </label>
+        <label class="field">
+          <span>URL Gambar (opsional)</span>
+          <input type="text" id="prodImage" placeholder="assets/JOKI.jpeg">
+        </label>
+        <label class="field">
+          <span>Deskripsi</span>
+          <textarea id="prodDesc" rows="2" placeholder="Deskripsi singkat..."></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" data-close="productModal">Batal</button>
+        <button class="btn primary" id="saveProductBtn">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DETAIL TRANSAKSI / STRUK -->
+  <div id="receiptModal" class="modal hidden">
+    <div class="modal-box receipt-modal">
+      <div class="modal-header">
+        <h2>Struk Transaksi</h2>
+        <button class="modal-close" data-close="receiptModal">✕</button>
+      </div>
+      <div class="modal-body" id="receiptContent"></div>
+      <div class="modal-footer">
+        <button class="btn secondary" data-close="receiptModal">Tutup</button>
+        <button class="btn primary" id="printReceiptBtn">🖨️ Cetak</button>
+        <button class="btn secondary" id="waReceiptBtn">💬 Kirim WA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- ===================== CHATBOT ===================== -->
+  <div id="chatbot-toggle" class="chatbot-toggle" title="Chat dengan kami">
+    💬
+  </div>
+
+  <div id="chatbot-box" class="chatbot-box hidden">
+    <div class="chatbot-header">
+      <div>
+        <strong>TDR Store Assistant</strong>
+        <small>● Online</small>
+      </div>
+      <button id="chatbot-close" type="button">✕</button>
+    </div>
+
+    <div id="chatbot-messages" class="chatbot-messages">
+      <div class="bot-msg">
+        Halo! 👋 Selamat datang di <b>TDR Store</b>.<br>
+        Ada yang bisa kami bantu? Tanya saja tentang produk, harga, cara order, atau pembayaran.
+      </div>
+    </div>
+
+    <div class="chatbot-quick">
+      <button type="button" data-q="harga">💰 Harga</button>
+      <button type="button" data-q="produk">📦 Produk</button>
+      <button type="button" data-q="cara">📋 Cara Order</button>
+      <button type="button" data-q="bayar">💳 Pembayaran</button>
+      <button type="button" data-q="joki">🎮 Joki ML</button>
+      <button type="button" data-q="pulsa">📱 Pulsa</button>
+      <button type="button" data-q="wa">💬 Chat Admin</button>
+    </div>
+
+    <div class="chatbot-input">
+      <input id="chatbot-input" type="text" placeholder="Ketik pertanyaan..." autocomplete="off">
+      <button id="chatbot-send" type="button">Kirim</button>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
