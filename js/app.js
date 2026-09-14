@@ -150,7 +150,7 @@ function initNav() {
   if (overlay) overlay.addEventListener("click", closeSidebar);
 }
 
-// ========== KASIR: PRODUCT GRID ==========
+// ========== KASIR: PRODUCT GRID (dikelompokkan per kategori, rapi & tidak tercampur) ==========
 function renderProductGrid() {
   const products = getProducts();
   const search = (document.getElementById("searchProduct").value || "").toLowerCase();
@@ -180,24 +180,68 @@ function renderProductGrid() {
     return;
   }
 
-  grid.innerHTML = filtered
+  // group by category so each product line has its own tidy card, tidak tercampur
+  const groups = {};
+  filtered.forEach((p) => {
+    if (!groups[p.category]) groups[p.category] = [];
+    groups[p.category].push(p);
+  });
+
+  grid.innerHTML = Object.entries(groups)
+    .map(([catName, items]) => {
+      const prices = items.map((p) => p.price);
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+      const priceLabel = minP === maxP ? rupiah(minP) : `${rupiah(minP)} – ${rupiah(maxP)}`;
+      const totalStock = items.reduce((s, p) => s + (p.stock || 0), 0);
+      const cover = items.find((p) => p.image)?.image || "assets/logo.jpeg";
+      return `
+      <div class="category-card ${totalStock <= 0 ? "out-of-stock" : ""}" data-cat="${catName}">
+        <img src="${cover}" alt="${catName}" onerror="this.src='assets/logo.jpeg'">
+        <div class="info">
+          <h3>${catName}</h3>
+          <div class="count">${items.length} produk</div>
+          <div class="price">${priceLabel}</div>
+          <div class="stock">${totalStock > 0 ? "Tersedia" : "Stok habis"}</div>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  grid.querySelectorAll(".category-card").forEach((card) => {
+    card.onclick = () => openCategoryModal(card.dataset.cat, groups[card.dataset.cat]);
+  });
+}
+
+// ========== KASIR: MODAL DAFTAR VARIAN PER PRODUK/KATEGORI ==========
+function openCategoryModal(catName, items) {
+  document.getElementById("categoryModalTitle").textContent = catName;
+  document.getElementById("categoryModalSub").textContent = `${items.length} produk tersedia di kategori ini`;
+
+  const list = document.getElementById("categoryProductList");
+  list.innerHTML = items
     .map(
       (p) => `
-    <div class="product-card ${p.stock <= 0 ? "out-of-stock" : ""}" data-id="${p.id}">
+    <div class="product-list-row ${p.stock <= 0 ? "out-of-stock" : ""}" data-id="${p.id}">
       <img src="${p.image || "assets/logo.jpeg"}" alt="${p.name}" onerror="this.src='assets/logo.jpeg'">
-      <div class="info">
-        <h3>${p.name}</h3>
-        <div class="cat">${p.category}</div>
-        <div class="price">${rupiah(p.price)}</div>
-        <div class="stock">Stok: ${p.stock}</div>
+      <div class="detail">
+        <h4>${p.name}</h4>
+        ${p.desc ? `<div class="desc">${p.desc}</div>` : ""}
+        <div class="meta-row">
+          <span class="price">${rupiah(p.price)}</span>
+          <span class="stock">Stok: ${p.stock}</span>
+        </div>
       </div>
+      <button class="btn primary btn-sm add-variant-btn" data-id="${p.id}" ${p.stock <= 0 ? "disabled" : ""}>+ Tambah</button>
     </div>`
     )
     .join("");
 
-  grid.querySelectorAll(".product-card:not(.out-of-stock)").forEach((card) => {
-    card.onclick = () => addToCart(card.dataset.id);
+  list.querySelectorAll(".add-variant-btn").forEach((btn) => {
+    btn.onclick = () => addToCart(btn.dataset.id);
   });
+
+  document.getElementById("categoryModal").classList.remove("hidden");
 }
 
 function addToCart(productId) {
@@ -352,6 +396,13 @@ function confirmPayment() {
     return;
   }
 
+  // untuk QRIS, pembayaran dianggap pas (lunas) & buat nomor referensi unik
+  const qrisRef = method === "qris"
+    ? "QR" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 90 + 10)
+    : "";
+  const paidAmount = method === "cash" ? cashReceived : total;
+  const change = method === "cash" ? cashReceived - total : 0;
+
   // kurangi stok
   const products = getProducts();
   cart.forEach((item) => {
@@ -370,9 +421,12 @@ function confirmPayment() {
     discount,
     total,
     method,
-    cashReceived: method === "cash" ? cashReceived : 0,
-    change: method === "cash" ? cashReceived - total : 0,
-    note
+    cashReceived: paidAmount,
+    change,
+    qrisRef,
+    status: "LUNAS",
+    note,
+    returns: []
   };
 
   const txs = getTransactions();
@@ -405,6 +459,21 @@ function showReceipt(tx) {
     )
     .join("");
 
+  const returns = tx.returns || [];
+  const returnsHtml = returns.length
+    ? `<hr><div class="bold" style="margin-bottom:4px">CATATAN PENGEMBALIAN</div>` +
+      returns
+        .map(
+          (r) => `
+      <div class="return-note">
+        <div class="row"><span>${new Date(r.date).toLocaleString("id-ID")}</span><span>-${rupiah(r.amount)}</span></div>
+        <div class="return-items">${r.items.map((it) => `${it.name} ×${it.qty}`).join(", ")}</div>
+        ${r.reason ? `<div class="return-reason">Alasan: ${r.reason}</div>` : ""}
+      </div>`
+        )
+        .join("")
+    : "";
+
   content.innerHTML = `
     <div class="receipt" id="printArea">
       <div class="center bold">TDR STORE</div>
@@ -414,6 +483,7 @@ function showReceipt(tx) {
       <div class="row"><span>No.</span><span>${tx.id}</span></div>
       <div class="row"><span>Tanggal</span><span>${dateStr}</span></div>
       <div class="row"><span>Metode</span><span>${tx.method === "qris" ? "QRIS" : "Cash"}</span></div>
+      ${tx.method === "qris" && tx.qrisRef ? `<div class="row"><span>No. Ref QRIS</span><span>${tx.qrisRef}</span></div>` : ""}
       <hr>
       ${itemsHtml}
       <hr>
@@ -421,19 +491,99 @@ function showReceipt(tx) {
       ${tx.adminFee > 0 ? `<div class="row"><span>Biaya Admin (Pulsa)</span><span>${rupiah(tx.adminFee)}</span></div>` : ""}
       ${tx.discount > 0 ? `<div class="row"><span>Diskon</span><span>-${rupiah(tx.discount)}</span></div>` : ""}
       <div class="row bold"><span>TOTAL</span><span>${rupiah(tx.total)}</span></div>
-      ${
-        tx.method === "cash"
-          ? `<div class="row"><span>Bayar</span><span>${rupiah(tx.cashReceived)}</span></div>
-             <div class="row"><span>Kembali</span><span>${rupiah(tx.change)}</span></div>`
-          : ""
-      }
+      <div class="row"><span>${tx.method === "qris" ? "Dibayar (QRIS)" : "Bayar (Cash)"}</span><span>${rupiah(tx.cashReceived)}</span></div>
+      <div class="row"><span>Kembalian</span><span>${rupiah(tx.change)}</span></div>
+      <div class="row bold"><span>Status</span><span>${tx.status || "LUNAS"}</span></div>
       ${tx.note ? `<hr><div>Catatan: ${tx.note}</div>` : ""}
+      ${returnsHtml}
       <hr>
       <div class="center" style="margin-top:8px">Terima kasih!</div>
     </div>`;
 
   document.getElementById("receiptModal").classList.remove("hidden");
   document.getElementById("receiptModal").dataset.txId = tx.id;
+}
+
+// ========== RETUR / PENGEMBALIAN ==========
+function openReturnModal() {
+  const txId = document.getElementById("receiptModal").dataset.txId;
+  const tx = getTransactions().find((t) => t.id === txId);
+  if (!tx) return;
+
+  const list = document.getElementById("returnItemList");
+  list.innerHTML = tx.items
+    .map(
+      (x, i) => `
+    <label class="return-item">
+      <input type="checkbox" class="ret-check" data-i="${i}">
+      <span class="ret-name">${x.name}</span>
+      <input type="number" class="ret-qty" data-i="${i}" min="1" max="${x.qty}" value="1" disabled>
+      <span class="ret-max">/ ${x.qty}</span>
+    </label>`
+    )
+    .join("");
+
+  document.getElementById("returnReason").value = "";
+  document.getElementById("returnAmount").textContent = rupiah(0);
+
+  function recalc() {
+    let sum = 0;
+    list.querySelectorAll(".ret-check").forEach((chk) => {
+      const i = Number(chk.dataset.i);
+      const qtyInput = list.querySelector(`.ret-qty[data-i="${i}"]`);
+      qtyInput.disabled = !chk.checked;
+      if (chk.checked) {
+        const qty = Math.min(Number(qtyInput.value) || 0, tx.items[i].qty);
+        sum += tx.items[i].price * qty;
+      }
+    });
+    document.getElementById("returnAmount").textContent = rupiah(sum);
+  }
+
+  list.querySelectorAll(".ret-check, .ret-qty").forEach((el) => el.addEventListener("input", recalc));
+  recalc();
+
+  document.getElementById("returnModal").classList.remove("hidden");
+}
+
+function saveReturn() {
+  const txId = document.getElementById("receiptModal").dataset.txId;
+  const txs = getTransactions();
+  const tx = txs.find((t) => t.id === txId);
+  if (!tx) return;
+
+  const list = document.getElementById("returnItemList");
+  const items = [];
+  let amount = 0;
+  list.querySelectorAll(".ret-check:checked").forEach((chk) => {
+    const i = Number(chk.dataset.i);
+    const qtyInput = list.querySelector(`.ret-qty[data-i="${i}"]`);
+    const qty = Math.min(Math.max(1, Number(qtyInput.value) || 1), tx.items[i].qty);
+    items.push({ name: tx.items[i].name, qty });
+    amount += tx.items[i].price * qty;
+  });
+
+  if (!items.length) {
+    toast("Pilih minimal 1 item untuk diretur!", "error");
+    return;
+  }
+
+  const reason = document.getElementById("returnReason").value.trim();
+
+  if (!tx.returns) tx.returns = [];
+  tx.returns.push({
+    id: "RET-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString(),
+    items,
+    amount,
+    reason
+  });
+
+  saveTransactions(txs);
+  document.getElementById("returnModal").classList.add("hidden");
+  toast("Pengembalian dicatat");
+  showReceipt(tx);
+  renderHistory();
 }
 
 // ========== MANAJEMEN PRODUK ==========
@@ -544,13 +694,17 @@ function renderHistory() {
     .map((t) => {
       const d = new Date(t.date).toLocaleString("id-ID");
       const itemCount = t.items.reduce((s, x) => s + x.qty, 0);
+      const hasReturn = (t.returns || []).length > 0;
       return `
       <tr>
         <td><strong>${t.id}</strong></td>
         <td>${d}</td>
         <td>${itemCount} item</td>
         <td>${rupiah(t.total)}</td>
-        <td><span class="badge ${t.method}">${t.method === "qris" ? "QRIS" : "Cash"}</span></td>
+        <td>
+          <span class="badge ${t.method}">${t.method === "qris" ? "QRIS" : "Cash"}</span>
+          ${hasReturn ? `<span class="badge retur">Retur</span>` : ""}
+        </td>
         <td><button class="btn secondary btn-sm" data-view="${t.id}">Lihat</button></td>
       </tr>`;
     })
@@ -693,10 +847,22 @@ document.addEventListener("DOMContentLoaded", () => {
     msg += `*TOTAL: ${rupiah(tx.total)}*%0A`;
     msg += `Metode: ${tx.method === "qris" ? "QRIS" : "Cash"}%0A`;
     if (tx.note) msg += `Catatan: ${tx.note}%0A`;
+    if (tx.returns && tx.returns.length) {
+      msg += `%0A*CATATAN PENGEMBALIAN*%0A`;
+      tx.returns.forEach((r) => {
+        msg += `- ${r.items.map((it) => `${it.name} x${it.qty}`).join(", ")} (-${rupiah(r.amount)})`;
+        if (r.reason) msg += ` | Alasan: ${r.reason}`;
+        msg += `%0A`;
+      });
+    }
     msg += `%0ATerima kasih!`;
 
     window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, "_blank");
   };
+
+  // retur / pengembalian
+  document.getElementById("returReceiptBtn").onclick = openReturnModal;
+  document.getElementById("saveReturnBtn").onclick = saveReturn;
 
   // history filter
   document.getElementById("filterDate").addEventListener("change", renderHistory);
