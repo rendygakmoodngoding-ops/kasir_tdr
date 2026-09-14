@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0f1419">
+  <meta name="theme-color" content="#dbeafe">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Web Kasir - TDR Store</title>
   <link rel="stylesheet" href="css/style.css">
@@ -75,9 +75,9 @@
         </header>
 
         <div class="kasir-layout">
-          <!-- Product Grid -->
+          <!-- Product Grid (grouped by category) -->
           <div class="product-panel">
-            <div class="product-grid" id="productGrid"></div>
+            <div class="category-grid" id="productGrid"></div>
           </div>
 
           <!-- Cart Panel -->
@@ -334,6 +334,25 @@
     </div>
   </div>
 
+  <!-- MODAL KATEGORI PRODUK (daftar varian per produk) -->
+  <div id="categoryModal" class="modal hidden">
+    <div class="modal-box category-modal">
+      <div class="modal-header">
+        <div>
+          <h2 id="categoryModalTitle">Produk</h2>
+          <small id="categoryModalSub" style="color:var(--text-muted)"></small>
+        </div>
+        <button class="modal-close" data-close="categoryModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="product-list" id="categoryProductList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary full" data-close="categoryModal">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DETAIL TRANSAKSI / STRUK -->
   <div id="receiptModal" class="modal hidden">
     <div class="modal-box receipt-modal">
@@ -346,6 +365,33 @@
         <button class="btn secondary" data-close="receiptModal">Tutup</button>
         <button class="btn primary" id="printReceiptBtn">🖨️ Cetak</button>
         <button class="btn secondary" id="waReceiptBtn">💬 Kirim WA</button>
+        <button class="btn secondary" id="returReceiptBtn">↩️ Retur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL RETUR / PENGEMBALIAN -->
+  <div id="returnModal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Catat Pengembalian</h2>
+        <button class="modal-close" data-close="returnModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Pilih item yang dikembalikan/diretur dari transaksi ini.</p>
+        <div id="returnItemList" class="return-item-list"></div>
+        <label class="field">
+          <span>Alasan Pengembalian</span>
+          <textarea id="returnReason" rows="2" placeholder="Contoh: produk salah kirim, joki gagal, dll."></textarea>
+        </label>
+        <div class="change-box">
+          <span>Jumlah Dikembalikan</span>
+          <strong id="returnAmount">Rp0</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" data-close="returnModal">Batal</button>
+        <button class="btn primary" id="saveReturnBtn">Simpan Retur</button>
       </div>
     </div>
   </div>
@@ -375,12 +421,12 @@
     </div>
 
     <div class="chatbot-quick">
-      <button type="button" data-q="harga">💰 Harga</button>
-      <button type="button" data-q="produk">📦 Produk</button>
-      <button type="button" data-q="cara">📋 Cara Order</button>
-      <button type="button" data-q="bayar">💳 Pembayaran</button>
-      <button type="button" data-q="joki">🎮 Joki ML</button>
-      <button type="button" data-q="pulsa">📱 Pulsa</button>
+      <button type="button" data-q="harga"> Harga</button>
+      <button type="button" data-q="produk"> Produk</button>
+      <button type="button" data-q="cara"> Cara Order</button>
+      <button type="button" data-q="bayar"> Pembayaran</button>
+      <button type="button" data-q="joki"> Joki ML</button>
+      <button type="button" data-q="pulsa"> Pulsa</button>
       <button type="button" data-q="wa">💬 Chat Admin</button>
     </div>
 
